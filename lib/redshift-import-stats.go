@@ -57,6 +57,8 @@ type Target struct {
 func (t Target) SubQuery() string {
 	if t.Type == "timestamp" {
 		return fmt.Sprintf(QuerySourceTimeStampDiff, nowUTC.Unix(), t.Table, t.Column, pq.FormatTimestamp(nowUTC.Add(t.Offset*-1)), t.TableAlias())
+	} else if t.Type == "tiemstampz" {
+		return fmt.Sprintf(QuerySourceTimeStampDiff, now.Unix(), t.Table, t.Column, pq.FormatTimestamp(now.Add(t.Offset*-1)), t.TableAlias())
 	} else {
 		return fmt.Sprintf(QuerySourceIntegerDiff, now.Unix(), t.Table, t.Column, now.Add(t.Offset*-1).Unix(), t.TableAlias())
 	}
