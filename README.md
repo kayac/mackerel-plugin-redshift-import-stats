@@ -1,5 +1,8 @@
 ## mackerel-plugin-redshift-import-stats
 
+Report the timestamp record of the newest record in the table as a metric.
+You will be able to observe the delay in fetching data into Redshift.
+
 ### Installation
 
 Use [mkr](https://github.com/mackerelio/mkr).
