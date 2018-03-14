@@ -15,17 +15,22 @@ Recommended to specify the version.
 
 ```
 Usage:
-  mackerel-plugin-redshift-import-stats [OPTIONS]
+  main [OPTIONS]
 
 Application Options:
-  -H, --host=hostname                                       Redshift endpoint
-  -d, --database=database-name                              Database name
-  -p, --port=5439                                           Port number (default: 5439)
+  -H, --host=hostname                                       redshift endpoint
+  -d, --database=database-name                              database name
+  -p, --port=5439                                           port number (default: 5439)
   -u, --user=root                                           user name
   -P, --password=password                                   password
+  -t, --target=table_name:column_name:column_type:offset    Specify the target table (multiple allowed).
+                                                            target format: $1:$2:$3:$4
+                                                            $1: table_name: Target table name.
+                                                            $2: column_name: Time column of the table.
+                                                            $3: column_type: Type of the time column. [integer, timestamp, timestampz]
+                                                            $4: offset: Option. By default, narrow by the where clause up to 24 hours ago.
       --prefix=
       --tempfile=
-  -t, --target=table_name:column_name:column_type:offset    Describe the target table, time column, and time column type with colon separated value.
 
 Help Options:
   -h, --help                                                Show this help message

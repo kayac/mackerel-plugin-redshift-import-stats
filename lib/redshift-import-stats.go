@@ -36,12 +36,12 @@ var (
 )
 
 type RedshiftImportStats struct {
-	Host       string   `short:"H" long:"host" value-name:"hostname" description:"Redshift endpoint" required:"true"`
-	Database   string   `short:"d" long:"database" value-name:"database-name" description:"Database name" requierd:"true"`
-	Port       string   `short:"p" long:"port" value-name:"5439" default:"5439" description:"Port number"`
+	Host       string   `short:"H" long:"host" value-name:"hostname" description:"redshift endpoint" required:"true"`
+	Database   string   `short:"d" long:"database" value-name:"database-name" description:"database name" requierd:"true"`
+	Port       string   `short:"p" long:"port" value-name:"5439" default:"5439" description:"port number"`
 	Username   string   `short:"u" long:"user" value-name:"root" description:"user name" required:"true"`
 	Password   string   `short:"P" long:"password" value-name:"password" description:"password" required:"true"`
-	OptTargets []string `short:"t" long:"target" required:"true" value-name:"table_name:column_name:column_type:offset" description:"Describe the target table, time column, and time column type with colon separated value."`
+	OptTargets []string `short:"t" long:"target" required:"true" value-name:"table_name:column_name:column_type:offset" description:"Specify the target table (multiple allowed).\ntarget format: $1:$2:$3:$4\n$1: table_name: Target table name.\n$2: column_name: Time column of the table.\n$3: column_type: Type of the time column. [integer, timestamp, timestampz]\n$4: offset: Option. By default, narrow by the where clause up to 24 hours ago."`
 	Prefix     string   `long:"prefix"`
 	Tempfile   string   `long:"tempfile"`
 	Targets    []Target
