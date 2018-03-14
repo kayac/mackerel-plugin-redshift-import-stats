@@ -4,29 +4,36 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	flags "github.com/jessevdk/go-flags"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	mp "github.com/mackerelio/go-mackerel-plugin"
 	"github.com/mackerelio/golib/logging"
 )
 
 const (
-	DEFAULT_OFFSET           = "24"
+	DEFAULT_OFFSET           = 24
 	QuerySourceTimeStampDiff = `	(
-		SELECT EXTRACT(epoch FROM CONVERT_TIMEZONE('JST', SYSDATE) - MAX(%[2]s)) AS %[4]s_delay
-		FROM %[1]s WHERE %[2]s >= CONVERT_TIMEZONE('JST', DATEADD(hour, -%[3]s, SYSDATE))
-	) AS %[4]s`
+		SELECT %[1]d - EXTRACT(epoch FROM MAX(%[3]s)) AS %[5]s_delay
+		FROM %[2]s WHERE %[3]s >= '%[4]s'
+	) AS %[5]s`
 
 	QuerySourceIntegerDiff = `	(
-		SELECT EXTRACT(epoch FROM CONVERT_TIMEZONE('JST', SYSDATE)) - MAX(%[2]s) AS %[4]s_delay
-		FROM %[1]s WHERE %[2]s >= EXTRACT(epoch FROM CONVERT_TIMEZONE('JST', DATEADD(hour, -%[3]s, SYSDATE)))
-	) AS %[4]s`
+		SELECT %[1]d - MAX(%[3]s) AS %[5]s_delay
+		FROM %[2]s WHERE %[3]s >= %[4]d
+	) AS %[5]s`
 )
 
-var logger = logging.GetLogger("metrics.plugin.redshift-import-stats")
+var (
+	logger = logging.GetLogger("metrics.plugin.redshift-import-stats")
+
+	now    time.Time
+	nowUTC time.Time
+)
 
 type RedshiftImportStats struct {
 	Host       string   `short:"H" long:"host" value-name:"hostname" description:"Redshift endpoint" required:"true"`
@@ -44,11 +51,15 @@ type Target struct {
 	Table  string
 	Column string
 	Type   string
-	Offset string
+	Offset time.Duration
 }
 
-func (t Target) SubQuery(querySource string) string {
-	return fmt.Sprintf(querySource, t.Table, t.Column, t.Offset, t.TableAlias())
+func (t Target) SubQuery() string {
+	if t.Type == "timestamp" {
+		return fmt.Sprintf(QuerySourceTimeStampDiff, nowUTC.Unix(), t.Table, t.Column, pq.FormatTimestamp(nowUTC.Add(t.Offset*-1)), t.TableAlias())
+	} else {
+		return fmt.Sprintf(QuerySourceIntegerDiff, now.Unix(), t.Table, t.Column, now.Add(t.Offset*-1).Unix(), t.TableAlias())
+	}
 }
 
 func (t Target) TableAlias() string {
@@ -57,10 +68,6 @@ func (t Target) TableAlias() string {
 
 func (t Target) ResultField() string {
 	return fmt.Sprintf("%[1]s_delay", t.TableAlias())
-}
-
-func subQueryBuilder(querySource string, target Target) string {
-	return target.SubQuery(querySource)
 }
 
 func (p *RedshiftImportStats) parseOptTarget() error {
@@ -76,10 +83,15 @@ func (p *RedshiftImportStats) parseOptTarget() error {
 
 		offset := DEFAULT_OFFSET
 		if len(v) == 4 {
-			offset = v[3]
+			var err error
+
+			offset, err = strconv.Atoi(v[3])
+			if err != nil {
+				return errors.New(fmt.Sprintf("Invalid offset: %s", offset))
+			}
 		}
 
-		p.Targets = append(p.Targets, Target{Table: v[0], Column: v[1], Type: v[2], Offset: offset})
+		p.Targets = append(p.Targets, Target{Table: v[0], Column: v[1], Type: v[2], Offset: time.Duration(offset) * time.Hour})
 	}
 	return nil
 }
@@ -89,14 +101,7 @@ func QueryBuilder(stats *RedshiftImportStats) string {
 
 	subQueries := []string{}
 	for _, t := range stats.Targets {
-		qs := ""
-		switch t.Type {
-		case "integer":
-			qs = QuerySourceIntegerDiff
-		default:
-			qs = QuerySourceTimeStampDiff
-		}
-		subQueries = append(subQueries, subQueryBuilder(qs, t))
+		subQueries = append(subQueries, t.SubQuery())
 	}
 
 	fmt.Fprintln(out, "SELECT")
@@ -188,6 +193,10 @@ func (p *RedshiftImportStats) FetchMetrics() (map[string]float64, error) {
 }
 
 func Do() {
+	now = time.Now()
+	_, offsetTZ := now.Zone()
+	nowUTC = now.Add(time.Duration(offsetTZ) * time.Second)
+
 	stats := &RedshiftImportStats{
 		Targets: []Target{},
 	}
