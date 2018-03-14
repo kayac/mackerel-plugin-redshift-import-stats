@@ -31,11 +31,7 @@ Help Options:
   -h, --help                                                Show this help message
 ```
 
-## Author
-
-KAYAC Inc.
-
-## Example of mackerel-agent.conf
+### Example of mackerel-agent.conf
 
 ```
 [plugin.metrics.redshift-import-stats]
@@ -46,9 +42,14 @@ command = '''
     -u user_ro \
     -P 3x4mp1ep455w0rd \
     -t receipt:created_at:timestamp \
-    -t user_action_log:time:integer
+    -t user_action_log:time:integer \
+    -t campaign:time:integer:128
 '''
 ```
+
+## Author
+
+KAYAC Inc.
 
 ## License
 

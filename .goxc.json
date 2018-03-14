@@ -1,7 +1,7 @@
 {
   "ArtifactsDest": "dist",
   "Tasks": [
-    "crean-destination",
+    "clean-destination",
     "xc",
     "archive-zip",
     "rmbin"

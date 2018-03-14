@@ -21,6 +21,6 @@ clean:
 	rm -fr dist/*
 
 release: dist
-	ghr -u kayac -r mackerel-plugin-gunfish $(LATEST_TAG) dist/snapshot/
+	ghr -u kayac -r mackerel-plugin-redshift-import-stats $(LATEST_TAG) dist/snapshot/
 
 .PHONY: packages test lint clean setup dist
