@@ -18,12 +18,12 @@ import (
 const (
 	DEFAULT_OFFSET           = 24
 	QuerySourceTimeStampDiff = `	(
-		SELECT %[1]d - EXTRACT(epoch FROM MAX(%[3]s)) AS %[5]s_delay
+		SELECT %[1]d - EXTRACT(epoch FROM MAX(%[3]s)) AS %[5]s_delay, count(*) AS %[5]s_count
 		FROM %[2]s WHERE %[3]s >= '%[4]s'
 	) AS %[5]s`
 
 	QuerySourceIntegerDiff = `	(
-		SELECT %[1]d - MAX(%[3]s) AS %[5]s_delay
+		SELECT %[1]d - MAX(%[3]s) AS %[5]s_delay, count(*) AS %[5]s_count
 		FROM %[2]s WHERE %[3]s >= %[4]d
 	) AS %[5]s`
 )
@@ -68,8 +68,8 @@ func (t Target) TableAlias() string {
 	return strings.Replace(t.Table, ".", "_", -1)
 }
 
-func (t Target) ResultField() string {
-	return fmt.Sprintf("%[1]s_delay", t.TableAlias())
+func (t Target) ResultField(rType string) string {
+	return fmt.Sprintf("%[1]s_%[2]s", t.TableAlias(), rType)
 }
 
 func (p *RedshiftImportStats) parseOptTarget() error {
@@ -114,7 +114,8 @@ func QueryBuilder(stats *RedshiftImportStats) string {
 			func() []string {
 				r := []string{}
 				for _, t := range stats.Targets {
-					r = append(r, "\t"+t.TableAlias()+"."+t.ResultField())
+					r = append(r, "\t"+t.TableAlias()+"."+t.ResultField("delay"))
+					r = append(r, "\t"+t.TableAlias()+"."+t.ResultField("count"))
 				}
 				return r
 			}(),
@@ -129,10 +130,10 @@ func QueryBuilder(stats *RedshiftImportStats) string {
 	return out.String()
 }
 
-func (t Target) MetricDef() mp.Metrics {
+func (t Target) MetricDef(rType string) mp.Metrics {
 	return mp.Metrics{
-		Name:  t.ResultField(),
-		Label: strings.Title(strings.Replace(t.ResultField(), "_", " ", -1)),
+		Name:  t.ResultField(rType),
+		Label: strings.Title(strings.Replace(t.ResultField(rType), "_", " ", -1)),
 		Diff:  false,
 	}
 }
@@ -148,9 +149,14 @@ func (p *RedshiftImportStats) GraphDefinition() map[string]mp.Graphs {
 	labelPrefix := strings.Title(p.Prefix)
 
 	delayMetrics := []mp.Metrics{}
+	countMetrics := []mp.Metrics{}
 
 	for _, t := range p.Targets {
-		delayMetrics = append(delayMetrics, t.MetricDef())
+		delayMetrics = append(delayMetrics, t.MetricDef("delay"))
+	}
+
+	for _, t := range p.Targets {
+		countMetrics = append(countMetrics, t.MetricDef("count"))
 	}
 
 	var graphdef = map[string]mp.Graphs{
@@ -158,6 +164,11 @@ func (p *RedshiftImportStats) GraphDefinition() map[string]mp.Graphs {
 			Label:   labelPrefix + " Delay",
 			Unit:    mp.UnitInteger,
 			Metrics: delayMetrics,
+		},
+		"count": {
+			Label:   labelPrefix + " Count",
+			Unit:    mp.UnitInteger,
+			Metrics: countMetrics,
 		},
 	}
 
