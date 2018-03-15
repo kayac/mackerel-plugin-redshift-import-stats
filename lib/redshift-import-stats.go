@@ -36,11 +36,11 @@ var (
 )
 
 type RedshiftImportStats struct {
-	Host       string   `short:"H" long:"host" value-name:"hostname" description:"redshift endpoint" required:"true"`
-	Database   string   `short:"d" long:"database" value-name:"database-name" description:"database name" requierd:"true"`
+	Host       string   `short:"H" long:"host" value-name:"hostname" description:"redshift endpoint"`
+	Database   string   `short:"d" long:"database" value-name:"database-name" description:"database name"`
 	Port       string   `short:"p" long:"port" value-name:"5439" default:"5439" description:"port number"`
-	Username   string   `short:"u" long:"user" value-name:"root" description:"user name" required:"true"`
-	Password   string   `short:"P" long:"password" value-name:"password" description:"password" required:"true"`
+	Username   string   `short:"u" long:"user" value-name:"root" description:"user name"`
+	Password   string   `short:"P" long:"password" value-name:"password" description:"password"`
 	OptTargets []string `short:"t" long:"target" required:"true" value-name:"table_name:column_name:column_type:offset" description:"Specify the target table (multiple allowed).\ntarget format: $1:$2:$3:$4\n$1: table_name: Target table name.\n$2: column_name: Time column of the table.\n$3: column_type: Type of the time column. [integer, timestamp, timestampz]\n$4: offset: Option. By default, narrow by the where clause up to 24 hours ago."`
 	Prefix     string   `long:"prefix"`
 	Tempfile   string   `long:"tempfile"`
@@ -168,7 +168,18 @@ func (p *RedshiftImportStats) FetchMetrics() (map[string]float64, error) {
 	resultMap := map[string]interface{}{}
 	metrics := map[string]float64{}
 
-	db, err := sqlx.Connect("postgres", fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable", p.Host, p.Port, p.Username, p.Database))
+	dataSource := fmt.Sprintf("host=%s port=%s sslmode=verify-full", p.Host, p.Port)
+	if p.Username != "" {
+		dataSource += " user=" + p.Username
+	}
+	if p.Database != "" {
+		dataSource += " dbname=" + p.Database
+	}
+	if p.Password != "" {
+		dataSource += " password=" + p.Password
+	}
+
+	db, err := sqlx.Connect("postgres", dataSource)
 	if err != nil {
 		logger.Errorf("Failed FetchMetrics: Connect Redshift: %s", err)
 		return metrics, err
