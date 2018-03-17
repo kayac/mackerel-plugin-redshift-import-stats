@@ -26,10 +26,11 @@ const (
 		SELECT %[1]d - MAX(%[3]s) AS %[5]s_delay
 		FROM %[2]s WHERE %[3]s >= %[4]d
 	) AS %[5]s`
+	Prefix = "redshift-import-stats"
 )
 
 var (
-	logger = logging.GetLogger("metrics.plugin.redshift-import-stats")
+	logger = logging.GetLogger("metrics.plugin." + Prefix)
 
 	now    time.Time
 	nowUTC time.Time
@@ -129,39 +130,25 @@ func QueryBuilder(stats *RedshiftImportStats) string {
 	return out.String()
 }
 
-func (t Target) MetricDef() mp.Metrics {
-	return mp.Metrics{
-		Name:  t.ResultField(),
-		Label: strings.Title(strings.Replace(t.ResultField(), "_", " ", -1)),
-		Diff:  false,
-	}
-}
-
 func (p *RedshiftImportStats) MetricKeyPrefix() string {
 	if p.Prefix == "" {
-		p.Prefix = "redshift-import-stats"
+		p.Prefix = Prefix
 	}
-	return p.Prefix
+	return Prefix + "-" + p.Prefix
 }
 
 func (p *RedshiftImportStats) GraphDefinition() map[string]mp.Graphs {
 	labelPrefix := strings.Title(p.Prefix)
 
-	delayMetrics := []mp.Metrics{}
-
-	for _, t := range p.Targets {
-		delayMetrics = append(delayMetrics, t.MetricDef())
-	}
-
-	var graphdef = map[string]mp.Graphs{
-		"delay": {
-			Label:   labelPrefix + " Delay",
-			Unit:    mp.UnitInteger,
-			Metrics: delayMetrics,
+	return map[string]mp.Graphs{
+		"delay.#": {
+			Label: labelPrefix + " Delay",
+			Unit:  mp.UnitInteger,
+			Metrics: []mp.Metrics{
+				{Name: "delay", Label: "delay"},
+			},
 		},
 	}
-
-	return graphdef
 }
 
 func (p *RedshiftImportStats) FetchMetrics() (map[string]float64, error) {
@@ -199,7 +186,7 @@ func (p *RedshiftImportStats) FetchMetrics() (map[string]float64, error) {
 		} else if i64, ok := v.(int64); ok {
 			metric = float64(i64)
 		}
-		metrics[k] = metric
+		metrics["delay."+strings.Replace(k, "_delay", ".delay", 1)] = metric
 	}
 
 	return metrics, nil
