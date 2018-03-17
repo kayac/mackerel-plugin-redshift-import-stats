@@ -145,7 +145,7 @@ func (p *RedshiftImportStats) GraphDefinition() map[string]mp.Graphs {
 			Label: labelPrefix + " Delay",
 			Unit:  mp.UnitInteger,
 			Metrics: []mp.Metrics{
-				{Name: "delay", Label: "delay"},
+				{Name: "seconds", Label: "Seconds"},
 			},
 		},
 	}
@@ -186,7 +186,7 @@ func (p *RedshiftImportStats) FetchMetrics() (map[string]float64, error) {
 		} else if i64, ok := v.(int64); ok {
 			metric = float64(i64)
 		}
-		metrics["delay."+strings.Replace(k, "_delay", ".delay", 1)] = metric
+		metrics["delay."+strings.Replace(k, "_delay", ".seconds", 1)] = metric
 	}
 
 	return metrics, nil
