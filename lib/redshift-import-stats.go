@@ -26,11 +26,11 @@ const (
 		SELECT %[1]d - MAX(%[3]s) AS %[5]s_delay
 		FROM %[2]s WHERE %[3]s >= %[4]d
 	) AS %[5]s`
-	Prefix = "redshift-import-stats"
+	prefix = "redshift-import-stats"
 )
 
 var (
-	logger = logging.GetLogger("metrics.plugin." + Prefix)
+	logger = logging.GetLogger("metrics.plugin." + prefix)
 
 	now    time.Time
 	nowUTC time.Time
@@ -132,9 +132,9 @@ func QueryBuilder(stats *RedshiftImportStats) string {
 
 func (p *RedshiftImportStats) MetricKeyPrefix() string {
 	if p.Prefix == "" {
-		p.Prefix = Prefix
+		p.Prefix = prefix
 	}
-	return Prefix + "-" + p.Prefix
+	return p.Prefix
 }
 
 func (p *RedshiftImportStats) GraphDefinition() map[string]mp.Graphs {
