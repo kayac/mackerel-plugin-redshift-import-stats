@@ -73,6 +73,15 @@ func (t Target) ResultField() string {
 	return fmt.Sprintf("%[1]s_delay", t.TableAlias())
 }
 
+func (t Target) MetricDef() mp.Metrics {
+	name := strings.TrimSuffix(t.ResultField(), "_delay")
+	return mp.Metrics{
+		Name:  name,
+		Label: strings.Title(strings.Replace(name, "_", " ", -1)),
+		Diff:  false,
+	}
+}
+
 func (p *RedshiftImportStats) parseOptTarget() error {
 	for _, t := range p.OptTargets {
 		v := strings.Split(t, ":")
@@ -140,13 +149,17 @@ func (p *RedshiftImportStats) MetricKeyPrefix() string {
 func (p *RedshiftImportStats) GraphDefinition() map[string]mp.Graphs {
 	labelPrefix := strings.Title(p.Prefix)
 
+	delayMetrics := []mp.Metrics{}
+
+	for _, t := range p.Targets {
+		delayMetrics = append(delayMetrics, t.MetricDef())
+	}
+
 	return map[string]mp.Graphs{
-		"delay.#": {
-			Label: labelPrefix + " Delay",
-			Unit:  mp.UnitInteger,
-			Metrics: []mp.Metrics{
-				{Name: "seconds", Label: "Seconds"},
-			},
+		"delay": {
+			Label:   labelPrefix + " Delay",
+			Unit:    mp.UnitInteger,
+			Metrics: delayMetrics,
 		},
 	}
 }
@@ -186,7 +199,7 @@ func (p *RedshiftImportStats) FetchMetrics() (map[string]float64, error) {
 		} else if i64, ok := v.(int64); ok {
 			metric = float64(i64)
 		}
-		metrics["delay."+strings.Replace(k, "_delay", ".seconds", 1)] = metric
+		metrics["delay."+strings.TrimSuffix(k, "_delay")] = metric
 	}
 
 	return metrics, nil
