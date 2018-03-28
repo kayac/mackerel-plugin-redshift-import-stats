@@ -199,7 +199,7 @@ func (p *RedshiftImportStats) FetchMetrics() (map[string]float64, error) {
 		} else if i64, ok := v.(int64); ok {
 			metric = float64(i64)
 		}
-		metrics["delay."+strings.TrimSuffix(k, "_delay")] = metric
+		metrics[strings.TrimSuffix(k, "_delay")] = metric
 	}
 
 	return metrics, nil
